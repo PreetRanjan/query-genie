@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { GenieConfig } from '../helpers/genie-config';
+import { GenieService } from '../helpers/genie-service';
 
 @Component({
   selector: 'app-json-analyzer',
@@ -10,21 +12,23 @@ export class JsonAnalyzerComponent implements OnInit {
   public statusMessage: string = 'Running...';
   public editor: any;
   public editorComp: any;
-
+  public config: GenieConfig;
   public tableName: string = 'tableName';
   public alias: string = 'a';
   public editor2: any;
   public editorComp2: any;
   public language: string = 'json';
+
+  objects: item[] = [{ id: 0, name: 'Root' }];
+  selectedObject: item = { id: 0, name: 'Root' };
   public editorOptions = {
-    theme: 'vs-light',
+    theme: 'vs-dark',
     language: 'json',
     autoIndent: true,
-    height: '600px',
   };
 
   public outputEditorOptions = {
-    theme: 'vs-light',
+    theme: 'vs-dark',
     language: 'sql',
     autoIndent: true,
   };
@@ -34,9 +38,19 @@ export class JsonAnalyzerComponent implements OnInit {
   //public code: string =
   //  'data = [1,2,    3,4,5] \nprint(data[0:3  ]) \n \n \n \n';
   public output_code: string = 'select 1; \n \n \n \n \n \n';
-  constructor() {}
+  constructor(private genie: GenieService) {
+    this.config = {
+      alias: this.alias,
+      useAlias: true,
+      tableName: this.tableName,
+      useExplodeForArray: false,
+      isLowerCase: true,
+    };
+  }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    //this.selectedObject = { id: 1, name: 'Angular' };
+  }
 
   formatDoc(editor: any) {
     //console.log(editor);
@@ -65,8 +79,65 @@ export class JsonAnalyzerComponent implements OnInit {
     console.log(this.editorComp.config);
     console.log(this.editorComp.editorConfig);
   }
-
+  //Main method for generating the code.
+  //To generate query based on object
   generateCode(editor: any) {
+    let input_code = this.editorComp._value;
+    let obj = JSON.parse(input_code);
+    //let fieldNames = Object.keys(obj);
+    let data = [];
+    if (this.selectedObject.name == 'Root') {
+      data = this.genie.getCols(obj);
+    } else {
+      data = this.genie.getCols(obj[this.selectedObject.name]);
+    }
+    let query = this.generateQuery(data);
+    this.editor2.setValue(query);
+  }
+  //refresh objects in input JSON
+  //This is now connected to Load Button but
+  //it will be run JSON input change to make it more
+  //accessible
+  refreshObjects(editor: any) {
+    this.objects = [{ id: 0, name: 'Root' }];
+    let input_code = this.editorComp._value;
+    console.log(input_code);
+    let obj = JSON.parse(input_code);
+    let fieldNames = Object.keys(obj);
+    fieldNames.forEach((key, index) => {
+      if (typeof obj[key] == 'object') {
+        this.objects.push({ id: index, name: key });
+      }
+    });
+    console.log(this.objects);
+  }
+  generateQuery(data: any[]): string {
+    let cols: any[] = [];
+    let tableName;
+    //cols part
+    data.forEach((col: any) => {
+      //console.log(col);
+      if (this.config.alias) {
+        cols.push(' ' + this.config.alias + '.' + col.name);
+      } else {
+        cols.push(' ' + col.name);
+      }
+    });
+    //lower part
+
+    if (this.config.alias && this.config.useAlias) {
+      tableName = this.config.tableName + ' ' + this.config.alias + ' \n';
+    } else {
+      tableName = this.config.tableName;
+    }
+
+    let cols_section = cols.join(',\n');
+
+    let template = `SELECT \n ${cols_section} \nFROM \n  ${tableName}`;
+
+    return template;
+  }
+  generateCode2(editor: any) {
     this.isLoading = true;
     this.statusMessage = 'Running...';
     //call code generation
@@ -102,4 +173,9 @@ export class JsonAnalyzerComponent implements OnInit {
       
     }, 200);*/
   }
+}
+
+interface item {
+  id: number;
+  name: string;
 }

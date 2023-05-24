@@ -11,6 +11,7 @@ import { NedWriterComponent } from './ned-writer/ned-writer.component';
 import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { LandingComponent } from './landing/landing.component';
+import { GenieService } from './helpers/genie-service';
 
 @NgModule({
   declarations: [
@@ -28,7 +29,7 @@ import { LandingComponent } from './landing/landing.component';
     FormsModule,
     MonacoEditorModule.forRoot(),
   ],
-  providers: [],
+  providers: [GenieService],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
